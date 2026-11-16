@@ -1,42 +1,51 @@
-#For the Dataset L (Full Scan)
+#Compare Q2's (timestamp, vehicle ID) results with Dataset L references
+#Before running this file deploy Q2 -> nes-cli -t Queries/VBB/Q2.yaml start
 
 import csv
+from collections import Counter
 
-#R1 - defined in rectangles.csv R1_center,13.375,13.43,52.485,52.54
-#befor running this file deploy Q2 -> nes-cli -t Queries/VBB/Q2.yaml start
-def vehicles_in_r1_reference (path):
-    total = 0
-    with open(path, newline="") as referenceCounts:
-        csvreader = csv.reader(referenceCounts)
-        next(csvreader)
+
+def reference_pairs(path):
+    pairs = Counter()
+    with open(path, newline='') as reference_matches:
+        csvreader = csv.reader(reference_matches)
+        next(csvreader)  # header
         for row in csvreader:
             if row[2] == "R1_center":
-                total += int(row[3])
+                pairs[(int(row[1]), int(row[3]))] += 1
+    return pairs
 
-        return (total)
 
-def vehicles_in_r1_Query2(path):
-    total_rows = 0
-    with open(path, newline="") as realCounts:
-        csvreader = csv.reader(realCounts)
-        next(csvreader)
+def query_pairs(path):
+    pairs = Counter()
+    with open(path, newline='') as query_results:
+        csvreader = csv.reader(query_results)
+        next(csvreader)  #  header
         for row in csvreader:
-           total_rows += 1
-        return (total_rows)
+            if len(row) < 2:
+                raise ValueError("Q2 output must contain both ID and TS columns")
+            pairs[(int(row[1]), int(row[0]))] += 1  # key is (TS, ID)
+    return pairs
+
 
 if __name__ == '__main__':
-        expected = vehicles_in_r1_reference(
-            'Queries/VBB/data/TestDatasets-BerlinMobility/L/reference_counts.csv'
-        )
-        actual = vehicles_in_r1_Query2('Output/vbb/q2.csv')
+    reference = reference_pairs(
+        'Queries/VBB/data/TestDatasets-BerlinMobility/L/reference_matches.csv'
+    )
+    actual = query_pairs('Output/vbb/q2.csv')
 
-        print(f'Erwartet (Referenz): {expected}')
-        print(f'Tatsächlich (NES Q2): {actual}')
+    missing = reference - actual
+    unexpected = actual - reference
+    print(f"Expected vehicles: {reference.total()}")
+    print(f"Actual vehicles: {actual.total()}")
 
-        assert (
-                expected == actual
-        ), f'Abweichung! Erwartet: {expected}, erhalten: {actual}'
-        print('[PASS] Q2 stimmt zu 100% mit der Ground Truth überein.')
+    if missing or unexpected:
+        print(f"missing: {sum(missing.values())}")
+        print(f"not wanted in the output: {sum(unexpected.values())}")
+        if missing:
+            print(f"Examples missing (TS, ID): {list(missing.items())[:10]}")
+        if unexpected:
+            print(f"Examples not wanted (TS, ID): {list(unexpected.items())[:10]}")
+        raise SystemExit(1)
 
-
-
+    print("[PASS] Alle Acutal-Treffer stimmen für R1_center mit der Referenz überein.")

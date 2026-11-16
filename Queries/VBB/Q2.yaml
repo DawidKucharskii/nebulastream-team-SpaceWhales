@@ -1,7 +1,7 @@
 # NES deployment format, matching Queries/Q1.yaml.
 # Deploy with a running worker: nes-cli -t Queries/VBB/Q2.yaml start
 query: |
-  SELECT id FROM vbb
+  SELECT id, ts FROM vbb
   WHERE tgeo_at_stbox(MovingPoint(lon, lat, ts), SpatioTemporalBox(FLOAT64(13.375), FLOAT64(13.43), FLOAT64(52.485), FLOAT64(52.54), UINT64(0), UINT64(4102444800)))
   INTO VBB_Q2_SINK
 
@@ -11,6 +11,8 @@ sinks:
     type: File
     schema:
       - name: ID
+        type: UINT64
+      - name: TS
         type: UINT64
     config:
       file_path: "Output/vbb/q2.csv"
