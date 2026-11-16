@@ -1,0 +1,132 @@
+Project B: Mobility Data Processing with NebulaStream — Test Datasets
+==================================================================
+
+Recorded from the public VBB GTFS-Realtime API
+(https://production.gtfsrt.vbb.de/data) on Friday 16.10.2026,
+16:03:52–16:14:01 Europe/Berlin (afternoon rush hour), one request every
+10 s (61 snapshots), with the static VBB GTFS timetable downloaded the same
+day.
+
+Licence: data by VBB Verkehrsverbund Berlin-Brandenburg GmbH, licensed under
+CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Modified: filtered
+to BVG lines, positions interpolated between stops, converted to CSV/JSON,
+reference answers added; S_disordered adds synthetic duplicates and reordering.
+
+Rows were produced with Queries/VBB/prepare.py from the example branch
+(github.com/marianaGarcez/nebulastream, branch mobility-twin/rebased-main),
+so the filters, trip IDs and interpolated positions are exactly the ones the
+example pipeline uses. Positions are interpolated between predicted stops,
+NOT GPS. Delays are real VBB predictions.
+
+Timestamps are Unix epoch SECONDS (not milliseconds). Header types follow
+`name:TYPE:NULLABILITY`, as in NebulaStream CSV sinks.
+
+The BVG radar API (v6.bvg.transport.rest/radar) was polled at the same time
+but did not answer (HTTP 503 / timeouts), so there is no radar data.
+
+
+Files and columns (same in every dataset folder)
+------------------------------------------------
+
+vbb_updates.csv — the stream, in arrival order. One row per trip instance
+and snapshot, then one boundary row (id = 0) that closes the snapshot.
+  id        stable trip-instance ID (trip_id, start_date, start_time hashed)
+  ts        feed timestamp of the snapshot (event time)
+  update_ts VBB's update time for this trip (0 if missing)
+  batch     snapshot number, 1..n (identical repeated feeds are dropped)
+  state     0 boundary, 1 active, 2 cancelled, 3 stale, 4 unsupported,
+            5 no position
+  lon, lat  interpolated position (0, 0 when state != 1)
+  delay_s   delay at the next stop in seconds, empty = unknown
+
+vbb_updates.jsonl — the same rows as JSON lines, with the upper-case keys
+  the example adapter sends over TCP. Replays directly into QLatest.yaml.
+
+trips.csv — lookup from id to trip_id, service_date, start_time, line.
+
+reference_counts.csv — the expected answer per snapshot and rectangle:
+  batch, ts, rect, vehicles (current vehicles inside), late (of those,
+  delay_s > 180).
+
+reference_matches.csv — the same answers listed per vehicle:
+  batch, ts, rect, id, late (true/false).
+
+metadata.json — lines, time range, row counts, the static GTFS hash and the
+  adapter's exclusion counters summed over all snapshots.
+
+rectangles.csv (top level) — the four query rectangles (west, east, south,
+north, WGS 84):
+  R1_center  13.375–13.43 / 52.485–52.54  the example branch's rectangle
+  R2_alex    13.40–13.42  / 52.517–52.527 small, around Alexanderplatz
+  R3_ring    13.28–13.52  / 52.45–52.58   large, roughly the Ringbahn
+  R4_west    13.15–13.25  / 52.50–52.56   Spandau, few vehicles
+
+
+How the reference answers are defined
+-------------------------------------
+
+Replay the stream row by row. Per id keep the row with the greatest version
+(update_ts, batch); equal or older versions are ignored. At each boundary
+row of batch b, the current vehicles are those whose kept row has batch = b
+and state = 1. A vehicle is inside a rectangle if west <= lon <= east and
+south <= lat <= north; it is late if delay_s is known and > 180.
+
+This is the LATEST BY semantics of the example branch. Absence from a
+snapshot is not a cancellation, but an absent vehicle is not current.
+
+Verified: S, M and L were streamed through the native QLatest query
+(LATEST BY + tgeo_at_stbox) on one NES worker; the NES results for R1_center
+match the reference answers in every batch (13, 34 and 34 batches).
+
+How wrong the shortcuts are (wrong answers / batch-rectangle queries):
+                  S      S_disordered   M        L
+  last received   0/52   4/52           0/136    0/136
+  never remove    24/52  24/52          132/136  132/136
+The live feed itself is ordered; "last received" only breaks once messages
+arrive late (S_disordered). Never removing ended or stale trips is wrong
+almost everywhere.
+
+
+1. S/
+-----
+Lines M10 and M41 only. First 19 snapshots,
+13 batches after dropping 6 repeated feeds.
+739 rows, 60 trip instances, 1–7 vehicles in R1_center.
+Duration: 2 min 48 s, ts 1792159432 to 1792159600.
+
+
+2. S_disordered/
+----------------
+S with deliberate transport errors, generated with a fixed seed (42):
+within every batch the rows are shuffled, about 10% of the rows are sent
+tw  ice, and for about 15% of the trips an OLDER version from an earlier batch
+arrives again. Same reference answers as S (checked when generating).
+911 rows. Use it to test that late and duplicate messages are ignored.
+Note: the example adapter re-numbers batches itself, so replay this file
+row by row (vbb_updates.jsonl), not through NativePipeline.send.
+
+
+3. M/
+-----
+All 28 BVG Metro lines (M1 … M85, tram and bus). All 61 snapshots, 34
+batches. 22,679 rows, 779 trip instances; 2–28 current vehicles in R1_center.
+Duration: 10 min 9 s, ts 1792159432 to 1792160041.
+
+
+4. L/
+-----
+All 244 BVG lines (U-Bahn, tram, bus, ferry). All 61 snapshots, 34 batches.
+76,778 rows, 2,674 trip instances; 10–64 current vehicles in R1_center
+and 76–461 in R3_ring.
+Duration: 10 min 9 s, ts 1792159432 to 1792160041.
+
+
+Notes
+-----
+- VBB refreshed the feed about every 20 s, so 27 of the 61 snapshots were
+  identical repeats and were dropped (see metadata.json).
+- Many trip updates are excluded as stale (older than 300 s) or because no
+  pair of stops brackets the feed time; see the counters in metadata.json.
+- One recording at one time of day. For WP2 experiments with larger vehicle
+  counts or higher rates, scale up by replaying L faster or by merging
+  shifted copies, and say so in the report.
