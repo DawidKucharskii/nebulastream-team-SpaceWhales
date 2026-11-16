@@ -39,7 +39,7 @@ physical:
     parser_config:
       type: JSON
     source_config:
-      file_path: "Output/vbb/input/positions.jsonl"
+      file_path: "Queries/VBB/data/TestDatasets-BerlinMobility/L/vbb_updates.jsonl"
 
 workers:
   - host: localhost:8080

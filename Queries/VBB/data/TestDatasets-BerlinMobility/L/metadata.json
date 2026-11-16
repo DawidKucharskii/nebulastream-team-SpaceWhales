@@ -1,0 +1,25 @@
+{
+  "dataset": "L",
+  "source": "VBB GTFS-Realtime, https://production.gtfsrt.vbb.de/data (VBB, CC BY 4.0)",
+  "static_gtfs_sha256": "1328a75246d9ce72d9a01def4a37ab9bcf36cd87e079c29a0f351daab3b7897d",
+  "lines": "all BVG (244 lines)",
+  "snapshots_recorded": 61,
+  "batches": 34,
+  "identical_or_older_snapshots_dropped": 27,
+  "first_ts": 1792159432,
+  "last_ts": 1792160041,
+  "rows_excluding_boundaries": 76778,
+  "trip_instances": 2674,
+  "reference_rows": 14549,
+  "late_threshold_s": 180,
+  "disorder_seed": null,
+  "adapter_exclusion_counts_summed": {
+    "trip_update": 339840,
+    "vehicle": 0,
+    "alert": 0,
+    "non_bvg": 2378,
+    "stale_or_missing_update_timestamp": 47557,
+    "no_valid_bracketing_segment": 6733,
+    "excluded_trip_relationship": 293
+  }
+}
