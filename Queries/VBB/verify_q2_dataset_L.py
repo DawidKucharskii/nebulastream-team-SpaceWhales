@@ -25,7 +25,6 @@ def vehicles_in_r1_Query2(path):
         return (total_rows)
 
 if __name__ == '__main__':
-    if __name__ == '__main__':
         expected = vehicles_in_r1_reference(
             'Queries/VBB/data/TestDatasets-BerlinMobility/L/reference_counts.csv'
         )
