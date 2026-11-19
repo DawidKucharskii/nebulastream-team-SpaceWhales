@@ -174,6 +174,8 @@ def main():
         def do_GET(self):
             if self.path in ('/', '/map.html'):
                 payload, mime = (HERE / 'map.html').read_bytes(), 'text/html; charset=utf-8'
+            elif self.path == '/map.css':
+                payload, mime = (HERE / 'map.css').read_bytes(), 'text/css; charset=utf-8'
             elif self.path == '/latest.geojson':
                 if Handler.error or not (output / 'latest.geojson').exists():
                     self.send_error(503, 'Refresh failed; retained snapshot is not current')
