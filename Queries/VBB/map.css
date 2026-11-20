@@ -1,3 +1,9 @@
-body { font: 16px system-ui; margin: 20px; }
+@import url('https://fonts.googleapis.com/css2?family=Josefin+Sans:ital,wght@0,100..700;1,100..700&display=swap');
+
+/* Main Settings for CSS*/
+body { font: 16px 'Josefin Sans', system-ui, sans-serif; margin: 20px; }
 #map { height: 70vh; }
 p { max-width: 1000px; }
+
+/* separately for Leaflet: */
+.leaflet-container { font-family: 'Josefin Sans', system-ui, sans-serif; }

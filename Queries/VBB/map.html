@@ -15,18 +15,10 @@ Positions themselves are estimated.</p>
 <p>Data: VBB, CC BY 4.0. Estimated positions derived from stop-time predictions.</p>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    const berlinBounds = L.latLngBounds(
-        [52.33, 13.08],
-        [52.68, 13.70]
-    );
-
+    //setting bounds of the map, adding padding for panning, creating map and setting bounds for zoom
+    const berlinBounds = L.latLngBounds([52.33, 13.08], [52.68, 13.70]);
     const panBounds = berlinBounds.pad(0.15)
-
-    const map = L.map('map', {
-        maxBounds: panBounds,
-        maxBoundsViscosity: 1.0,
-    });
-
+    const map = L.map('map', {maxBounds: panBounds, maxBoundsViscosity: 1.0});
     map.setMinZoom(map.getBoundsZoom(berlinBounds));
     map.fitBounds(berlinBounds);
 
